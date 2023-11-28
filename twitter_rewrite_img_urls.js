@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Twitter Rewrite Image URLs
 // @namespace    https://github.com/llyyr/twitter_rewrite_img_urls
-// @version      0.1
+// @downloadURL  https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
+// @updateURL    https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
+// @version      0.1.1
 // @author       llyyr
 // @description  Rewrite pbs.twimg.com urls and replace pbs.twimg.com urls on twitter.com to name=orig
 // @include      https://twitter.com/*
@@ -11,6 +13,14 @@
 // @license      MIT
 // ==/UserScript==
 
+/*
+
+0.1.1 - 29-11-2023:
+    Fix script not working anymore due to Twitter changing class ids.
+
+0.1 - 30-07-2022:
+    Intial version
+*/
 
 let url = window.location.href;
 
@@ -36,7 +46,7 @@ if (url.includes("twitter.com")) {
         let callback = function (mutations, observer) {
 
             for (let mutation of mutations) {
-                if (mutation.target.className.includes("css-1dbjc4n")) {
+                if (mutation.target.className.includes("css-175oi2r")) {
                     let img_list = mutation.target.getElementsByTagName("img");
 
                     for (let i = 0; i < img_list.length; i++) {
