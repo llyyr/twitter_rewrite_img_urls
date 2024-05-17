@@ -3,9 +3,10 @@
 // @namespace    https://github.com/llyyr/twitter_rewrite_img_urls
 // @downloadURL  https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
 // @updateURL    https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
-// @version      0.1.1
+// @version      0.1.2
 // @author       llyyr
 // @description  Rewrite pbs.twimg.com urls and replace pbs.twimg.com urls on twitter.com to name=orig
+// @include      https://x.com/*
 // @include      https://twitter.com/*
 // @include      https://pbs.twimg.com/media/*
 // @run-at       document-end
@@ -14,6 +15,8 @@
 // ==/UserScript==
 
 /*
+0.1.2 - 18-05-2024:
+    Fix muskrat induced breakage.
 
 0.1.1 - 29-11-2023:
     Fix script not working anymore due to Twitter changing class ids.
@@ -39,7 +42,7 @@ if (url.includes("https://pbs.twimg.com/media/") && !url.includes("name=orig")) 
     window.location.replace(url);
 }
 
-if (url.includes("twitter.com")) {
+if (url.includes("twitter.com") || url.includes("x.com")) {
     const root = document.evaluate("//div[@id=\"react-root\"]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
 
     if (root.singleNodeValue) {
