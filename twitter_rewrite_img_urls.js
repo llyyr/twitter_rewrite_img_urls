@@ -3,9 +3,9 @@
 // @namespace    https://github.com/llyyr/twitter_rewrite_img_urls
 // @downloadURL  https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
 // @updateURL    https://github.com/llyyr/twitter_rewrite_img_urls/raw/master/twitter_rewrite_img_urls.js
-// @version      0.1.2
+// @version      0.2.0
 // @author       llyyr
-// @description  Rewrite pbs.twimg.com urls and replace pbs.twimg.com urls on twitter.com to name=orig
+// @description  Rewrite pbs.twimg.com image URLs to their original size
 // @include      https://x.com/*
 // @include      https://twitter.com/*
 // @include      https://pbs.twimg.com/media/*
@@ -15,6 +15,9 @@
 // ==/UserScript==
 
 /*
+0.2.0 - 19-08-2026:
+    Rewrite
+
 0.1.2 - 18-05-2024:
     Fix muskrat induced breakage.
 
@@ -22,61 +25,66 @@
     Fix script not working anymore due to Twitter changing class ids.
 
 0.1 - 30-07-2022:
-    Intial version
+    Initial version
 */
 
-let url = window.location.href;
+(function() {
+    'use strict';
 
-
-if (url.includes("https://pbs.twimg.com/media/") && !url.includes("name=orig")) {
-    if (url.indexOf("?format=") > 0) {
-        url = url.replace("?format=", ".");
+    const MEDIA_RE = /pbs\.twimg\.com\/media\//;
+    function rewrite_url(src) {
+        if (!MEDIA_RE.test(src))
+            return src;
+        const url = new URL(src);
+        url.searchParams.set('name', 'orig');
+        return url.toString();
     }
 
-    if (url.match(/\&name=(\w+)/i)) {
-        url = url.replace(/\&name=(\w+)/gi, "?name=orig");
-    } else {
-        url = `${url}?name=orig`;
+    function get_tweet_id(img) {
+        const link = img.closest('a[href*="/status/"]');
+        const match = (link && link.href.match(/\/status\/(\d{5,})(?:\/|$)/i)) ||
+            location.pathname.match(/\/status\/(\d{5,})(?:\/photo\/|\/video\/|$)/i);
+        return match ? match[1] : null;
     }
 
-    window.location.replace(url);
-}
+    function rewrite_image(img) {
+        if (img.__rewrite_done)
+            return;
+        img.__rewrite_done = true;
+        const src = img.currentSrc || img.src;
+        const url = rewrite_url(src);
+        if (url === src)
+            return;
+        const tweet_id = get_tweet_id(img);
+        img.src = tweet_id ? `${url}#${tweet_id}` : url;
+    }
 
-if (url.includes("twitter.com") || url.includes("x.com")) {
-    const root = document.evaluate("//div[@id=\"react-root\"]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+    function process_node(node) {
+        if (node.nodeType !== Node.ELEMENT_NODE)
+            return;
+        if (node.tagName === 'IMG') {
+            rewrite_image(node);
+        } else {
+            node.querySelectorAll('img').forEach(rewrite_image);
+        }
+    }
 
-    if (root.singleNodeValue) {
-        let callback = function (mutations, observer) {
-
-            for (let mutation of mutations) {
-                if (mutation.target.className.includes("css-175oi2r")) {
-                    let img_list = mutation.target.getElementsByTagName("img");
-
-                    for (let i = 0; i < img_list.length; i++) {
-                        const img_src = img_list[i].src;
-
-                        if (img_src.includes("https://pbs.twimg.com/media/") && !img_src.includes("name=orig")) {
-                            let tweet_id = ""
-                            const tweet_url = img_list[i].closest("a[href*=\"/status/\"]");
-
-                            if (tweet_url) {
-                                tweet_id = "#" + tweet_url.href.match(/\/status\/(\d{5,})(?:\/|$)/i)[1];
-                            } else {
-                                const photo_url = url.match(/\/status\/(\d{5,})\/photo\//i);
-
-                                if (photo_url) {
-                                    tweet_id = "#" + photo_url[1];
-                                }
-                            }
-
-                            img_list[i].src = img_src.replace("?format=",".").replace(/&name=(\w+)/gi,"?name=orig") + tweet_id;
-                        }
-                    }
-                }
+    if (/^(.+?\.)?(twitter|x)\.com$/.test(location.host)) {
+        document.querySelectorAll('img').forEach(rewrite_image);
+        new MutationObserver(mutations => {
+            for (const { addedNodes, target } of mutations) {
+                addedNodes.forEach(process_node);
+                process_node(target);
             }
-        };
-
-        const observer = new MutationObserver(callback);
-        observer.observe(document.body, {childList: true, subtree: true});
+        }).observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['src']
+        });
+    } else if (location.host === 'pbs.twimg.com' && !location.href.includes(':orig')) {
+        const url = rewrite_url(location.href);
+        if (url !== location.href)
+            location.replace(url);
     }
-}
+})();
