@@ -15,6 +15,9 @@
 // ==/UserScript==
 
 /*
+0.2.1 - 30-10-2026:
+    Disable the stupid contextmenu on images.
+
 0.2.0 - 19-08-2026:
     Rewrite
 
@@ -30,7 +33,9 @@
 
 (function() {
     'use strict';
-
+    window.addEventListener('contextmenu', e => {
+        e.stopImmediatePropagation();
+    }, true);
     const MEDIA_RE = /pbs\.twimg\.com\/media\//;
     function rewrite_url(src) {
         if (!MEDIA_RE.test(src))
